@@ -164,6 +164,11 @@ dialog h2{margin:0 0 10px;font-size:20px;font-weight:800}
 .selrow select{flex:1;min-width:0;margin:2px 0;padding:9px 8px;font-size:15px;font-weight:700;
   background:linear-gradient(180deg,#ffffff,#f1f5f9);border:1.5px solid #cbd5e1;
   box-shadow:0 3px 0 var(--edge3d),0 6px 12px rgba(15,23,42,.10)}
+/* ===== تفاصيل الطلب: صف صنف بصورة ===== */
+.ord{cursor:pointer}
+.oitem{align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.oit{width:56px;height:56px;object-fit:cover;border-radius:12px;border:1px solid var(--line);box-shadow:0 3px 0 var(--edge3d);flex:none}
+.oit.ico{width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,#fff,#e8f0f4)}
 .ord .btn{min-height:48px;margin-top:6px}
 
 /* ===== شبكة المنتجات (زي التطبيق المرجعي) ===== */
@@ -238,7 +243,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.5";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.6";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -339,11 +344,14 @@ async function mine(){const{data}=await ok(sb.from("orders").select("*,order_ite
 
 /* ===== الأدمن ===== */
 async function aord(){
- const[a,b]=await Promise.all([ok(sb.from("orders").select("*,customer:profiles!customer_id(shop_name,phone,address),order_items(name,qty)").order("id",{ascending:false})),ok(sb.from("profiles").select("id,name,shop_name").eq("role","courier").eq("approved",true))]);
+ const[a,b,pi]=await Promise.all([ok(sb.from("orders").select("*,customer:profiles!customer_id(shop_name,phone,address),order_items(name,qty,unit_price,product_id)").order("id",{ascending:false})),ok(sb.from("profiles").select("id,name,shop_name").eq("role","courier").eq("approved",true)),ok(sb.from("products").select("id,image_url"))]);
  const O=a.data,R=b.data,nm=Object.fromEntries(R.map(r=>[r.id,r.name||r.shop_name||"مندوب"]));
+ const pim=Object.fromEntries((pi.data||[]).map(p=>[p.id,p.image_url]));
+ O.forEach(o=>(o.order_items||[]).forEach(i=>i.image_url=pim[i.product_id]||null));
+ AORD=O;ANM=nm;
  const rep=R.map(r=>{const m=O.filter(o=>o.rider_id===r.id),dn=m.filter(o=>o.status==="delivered"),exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
   return `<div class="card"><b>${esc(nm[r.id])}</b><div class="row"><span>تم التسليم / الكل</span><b>${dn.length} / ${m.length}</b></div><div class="row"><span>المحصّل</span><b>${fmt(got)}</b></div><div class="row"><span>العجز</span><b>${fmt(exp-got)}</b></div><div class="row"><span>مرتجعات</span><b>${fmt(rt)}</b></div></div>`}).join("");
- shell(O.map(o=>`<div class="card ord"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
+ shell(O.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
  <select data-rd="${o.id}"><option value="">اسند لمندوب</option>${R.map(r=>`<option value="${r.id}" ${o.rider_id===r.id?"selected":""}>${esc(nm[r.id])}</option>`).join("")}</select></span></div></div>`).join("")+`<h3>كشف المندوبين</h3>${rep||`<p class="mute">مفيش مناديب. حوّل حساب لمندوب من تبويب الحسابات.</p>`}`)}
 const pimg=p=>p.image_url?`<img class="pimg" src="${esc(p.image_url)}" alt="" loading="lazy">`:`<div class="ico">${p.emoji||"📦"}</div>`;
 async function upImg(file){
@@ -362,14 +370,45 @@ async function aacc(){const{data}=await ok(sb.from("profiles").select("*").order
 
 /* ===== المندوب ===== */
 async function deliv(){const{data}=await ok(sb.rpc("courier_orders")),todo=data.filter(o=>["received","preparing","out"].includes(o.status));
- shell(`<div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord"><div class="orow"><b>${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a> <button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
+ CORD=data||[];
+ shell(`<div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a> <button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
  ${["received","preparing"].includes(o.status)?`<button class="btn" data-out2="${o.id}">خرج للتوصيل</button>`:o.status==="out"?`<button class="btn" data-pay="${o.id}" data-due="${o.due}">تم التسليم والتحصيل</button><button class="btn ghost" data-rt="${o.id}">رفض أو مرتجع</button>`:o.collected!=null?`<div class="mute">اتحصّل ${fmt(o.collected)}</div>`:""}</div>`).join(""):`<p class="mute" style="text-align:center">مفيش طلبات متسندة لك لسه.</p>`))}
 const payDlg=(id,due)=>{dlg.innerHTML=`<h2>تأكيد التحصيل</h2><p>المطلوب: <b>${fmt(due)}</b></p><input id="pa" type="number" value="${due}"><button class="btn red" data-payok="${id}" data-due="${due}">تأكيد التسليم</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()};
 async function rtDlg(id){const{data}=await ok(sb.rpc("courier_order_items",{p_oid:id}));
  dlg.innerHTML=`<h2>رفض أو مرتجع</h2><select id="rr"><option>منتج تالف</option><option>غلط في الصنف</option><option>تأخير</option><option>المحل غيّر رأيه</option></select><p class="mute">اكتب الكمية المرتجعة لكل صنف (0 لو مش راجع).</p>`+data.map(i=>`<div class="row"><span>${esc(i.name)} (طلب ${i.qty})</span><input style="width:80px" type="number" min="0" max="${i.qty}" value="0" data-it="${i.item_id}"></div>`).join("")+`<button class="btn red" data-rok="${id}">تسجيل</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()}
 
-async function itemsDlg(id){const{data}=await ok(sb.rpc("courier_order_items",{p_oid:id}));
- dlg.innerHTML=`<h2>📋 أصناف الطلب</h2>`+((data||[]).length?(data||[]).map(i=>`<div class="row"><span>${esc(i.name)}</span><b>× ${i.qty}</b>${i.unit_price!=null?`<span>${fmt(i.unit_price)}</span>`:""}</div>`).join(""):`<p class="mute">مفيش أصناف في الطلب ده.</p>`)+`<button class="btn ghost" data-close="1">إغلاق</button>`;dlg.showModal()}
+/* ===== تفاصيل الطلب الكاملة (أدمن + مندوب): صور وأسعار وإجماليات ===== */
+let AORD=[],ANM={},CORD=[];
+function ordDlg(o){
+ const items=o.items||[];
+ const lines=items.map(i=>{const lt=(+i.qty||0)*(+i.unit_price||0);
+  return `<div class="orow oitem">${i.image_url?`<img class="oit" src="${esc(i.image_url)}" alt="" loading="lazy">`:`<div class="oit ico">📦</div>`}<div style="flex:1;min-width:0"><b>${esc(i.name)}</b><div class="mute">${i.qty} × ${i.unit_price!=null?fmt(i.unit_price):"—"}</div></div><b>${fmt(lt)}</b></div>`}).join("");
+ const tot=items.reduce((s,i)=>s+(+i.qty||0)*(+i.unit_price||0),0);
+ dlg.innerHTML=`<h2>طلب رقم ${o.id} ${o.status?`<span class="tag st-${o.status}">${ST[o.status]}</span>`:""}</h2>
+ ${o.shop?`<div class="mute">🏪 ${esc(o.shop)}</div>`:""}
+ ${o.phone?`<div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a></div>`:""}
+ ${o.address?`<div class="mute">📍 ${esc(o.address)}</div>`:""}
+ ${o.rider?`<div class="mute">🛵 المندوب: ${esc(o.rider)}</div>`:""}
+ ${o.created?`<div class="mute">🗓️ ${esc(o.created)}</div>`:""}
+ ${lines||`<p class="mute">مفيش أصناف في الطلب ده.</p>`}
+ ${items.length?`<div class="row big"><span>إجمالي الأصناف</span><b>${fmt(tot)}</b></div>`:""}
+ ${o.total!=null?`<div class="row"><span>${o.totalLabel||"إجمالي الطلب"}</span><b>${fmt(o.total)}</b></div>`:""}
+ ${o.collected!=null?`<div class="row"><span>المحصّل</span><b>${fmt(o.collected)}</b></div>`:""}
+ ${o.returned?`<div class="row"><span>مرتجع</span><b>${fmt(o.returned)}</b></div>`:""}
+ ${o.address||o.lat!=null?`<div style="margin:10px 0"><a class="btn ghost" href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a></div>`:""}
+ <button class="btn ghost" data-close="1">إغلاق</button>`;
+ dlg.showModal()}
+async function openOrd(id){
+ const a=(AORD||[]).find(o=>o.id==id);
+ if(a){ordDlg({id:a.id,shop:a.customer?.shop_name,phone:a.customer?.phone,address:a.address,total:a.total-(+a.returned_value||0),collected:a.collected,returned:+a.returned_value||0,status:a.status,rider:ANM[a.rider_id],lat:a.lat,lng:a.lng,map_link:a.map_link,customer:a.customer,created:a.created_at?new Date(a.created_at).toLocaleString("ar-EG"):null,items:(a.order_items||[]).map(i=>({name:i.name,qty:i.qty,unit_price:i.unit_price,image_url:i.image_url}))});return}
+ const c=(CORD||[]).find(o=>o.id==id);
+ if(c){const{data}=await ok(sb.rpc("courier_order_items",{p_oid:+id}));
+  ordDlg({id:c.id,shop:c.shop_name,phone:c.phone,address:c.address,total:+c.due,totalLabel:"المطلوب تحصيله",collected:c.collected,status:c.status,lat:c.lat,lng:c.lng,map_link:c.map_link,created:c.created_at?new Date(c.created_at).toLocaleString("ar-EG"):null,items:(data||[]).map(i=>({name:i.name,qty:i.qty,unit_price:i.unit_price,image_url:i.image_url}))});return}
+}
+/* الضغط على كارت الطلب نفسه (مش على زر أو قائمة أو لينك) يفتح التفاصيل */
+document.addEventListener("click",e=>{const c=e.target.closest(".ord[data-ord]");if(!c)return;if(e.target.closest("button,select,a,input,textarea"))return;openOrd(c.dataset.ord)});
+
+async function itemsDlg(id){await openOrd(id)}
 
 /* ===== الأحداث ===== */
 document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
