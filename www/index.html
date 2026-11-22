@@ -250,7 +250,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["acour","المناديب"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",acour:"🛵",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.10";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.11";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -508,7 +508,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
  }catch(x){fail(x)}});
 document.addEventListener("change",async e=>{const d=e.target.dataset,v=e.target.value;
  try{
- if(e.target.dataset.cimg&&e.target.files[0]){try{const u=await upImg(e.target.files[0]);await ok(sb.from("profiles").update({photo_url:u}).eq("id",me.id));me.photo_url=u;await route()}catch(_){alert("الصورة متحفظتش — شغّل ملف schema_v7.sql في Supabase الأول وبعدين جرّب تاني.")}return}
+ if(e.target.dataset.cimg&&e.target.files[0]){try{const u=await upImg(e.target.files[0]);await ok(sb.from("profiles").update({photo_url:u}).eq("id",me.id));me.photo_url=u;await route()}catch(e){console.error(e);alert("الصورة متحفظتش — جرّب تاني، ولو اتكررت قولي.")}return}
  if(e.target.id==="ordd"){ordDate=v;renderAord();return}
  if(d.st)await ok(sb.from("orders").update({status:v}).eq("id",d.st));
  if(d.rd)await ok(sb.from("orders").update({rider_id:v||null}).eq("id",d.rd));
