@@ -170,6 +170,8 @@ dialog h2{margin:0 0 10px;font-size:20px;font-weight:800}
 .oitem{align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .oit{width:56px;height:56px;object-fit:cover;border-radius:12px;border:1px solid var(--line);box-shadow:0 3px 0 var(--edge3d);flex:none}
 .oit.ico{width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,#fff,#e8f0f4)}
+.cav{width:64px;height:64px;border-radius:50%;overflow:hidden;flex:none;border:3px solid var(--edge3d);background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:30px}
+.cav img{width:100%;height:100%;object-fit:cover}
 .ord .btn{min-height:48px;margin-top:6px}
 
 /* ===== شبكة المنتجات (زي التطبيق المرجعي) ===== */
@@ -241,10 +243,10 @@ const ST={received:"تم الاستلام",preparing:"جاري التجهيز",o
 let TI=[];
 const tierPct=n=>TI.reduce((m,t)=>n>=t.min_qty?Math.max(m,+t.percent):m,0),dp=(p,n)=>Math.max(+p.discount_pct||0,tierPct(n)),up=(p,n)=>p.price*(1-dp(p,n)/100);
 const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t=TI.find(t=>t.min_qty>n);return t?`اشتري ${t.min_qty} واحصل على خصم ${+t.percent}%`:""};
-const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
-const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
+const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["acour","المناديب"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
+const IC={store:"🛒",mine:"📦",aord:"📋",acour:"🛵",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.8";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.9";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -302,7 +304,7 @@ async function boot(){try{const{data:{session}}=await withTimeout(sb.auth.getSes
  const{data:p}=await sb.from("profiles").select("*").eq("id",session.user.id).single();if(!p)return authView();
  me=p;if(!p.approved){app.innerHTML=`<div class="topbar">🚚 خدمة التوصيل السريع للمحلات والسوبرماركت: استلم طلبك بالجملة خلال <b>24 ساعة فقط</b> من وقت إتمام الطلب!</div><div class="brand"><span class="logo">🛒</span><div><b>تاجر جملة <span class="b2b">B2B</span></b><small>منصة التوريد المباشر للمحلات والسوبرماركت</small></div></div><div class="warn">حسابك قيد المراجعة. هنفعّله بعد ما نتأكد من بياناتك.</div><button class="btn ghost" data-out="1"><span class="ic">🚪</span>خروج</button>`;return}
  tab=TABS[p.role][0][0];route()}catch(e){authView()}}
-const route=()=>({store,mine,aord,aprod,adisc,aacc,deliv})[tab]().catch(fail);
+const route=()=>({store,mine,aord,acour,aprod,adisc,aacc,deliv})[tab]().catch(fail);
 sb.auth.onAuthStateChange(e=>{if(e==="SIGNED_OUT"||e==="SIGNED_IN")boot()});
 
 function authView(){app.innerHTML=`<div class="topbar">🚚 خدمة التوصيل السريع للمحلات والسوبرماركت: استلم طلبك بالجملة خلال <b>24 ساعة فقط</b> من وقت إتمام الطلب!</div><div class="brand"><span class="logo">🛒</span><div><b>تاجر جملة <span class="b2b">B2B</span></b><small>منصة التوريد المباشر للمحلات والسوبرماركت</small></div></div><p class="mute">سجّل دخولك لعرض أسعار الجملة</p><div class="nav"><button class="${mode==="in"?"on":""}" data-am="in">دخول</button><button class="${mode==="up"?"on":""}" data-am="up">حساب جديد</button></div><div class="card auth">${mode==="up"?`<input id="f1" placeholder="اسمك"><input id="f2" placeholder="اسم المحل"><input id="f3" type="tel" placeholder="رقم التليفون"><input id="f4" placeholder="العنوان">`:""}<input id="em" type="email" placeholder="الإيميل"><input id="pw" type="password" placeholder="كلمة المرور"><div class="warn" ${err?"":"hidden"}>${esc(err)}</div><button class="btn" data-login="1">${mode==="in"?"دخول":"إنشاء الحساب"}</button></div>`}
@@ -365,17 +367,41 @@ function renderAord(){
  const chip=(v,l)=>`<button class="btn ${ordRange===v&&!ordDate?"":"ghost"}" data-orr="${v}">${l}</button>`;
  shell(`<div class="orow" style="margin-bottom:10px"><button class="btn ${ordView==="cur"?"":"ghost"}" data-orv="cur">📦 الحالية (${cur.length})</button><button class="btn ${ordView==="past"?"":"ghost"}" data-orv="past">🗂️ السابقة (${past.length})</button></div>`
  +(ordView==="past"?`<div class="card"><div class="orow">${chip("all","الكل")}${chip("today","اليوم")}${chip("week","الأسبوع")}${chip("month","الشهر")}</div><div class="orow"><input type="date" id="ordd" value="${ordDate}" style="flex:1"><input id="ordq" type="search" inputmode="numeric" placeholder="ابحث برقم الطلب…" value="${esc(ordQ)}" style="flex:1"></div></div>`:"")
- +(list.length?list.map(ordCard).join(""):`<p class="mute" style="text-align:center">${ordView==="cur"?"مفيش طلبات حالية — كل الطلبات اتسلمت ✅":"مفيش طلبات سابقة في الفترة دي."}</p>`)
- +`<h3>كشف المندوبين</h3>${AREP||`<p class="mute">مفيش مناديب. حوّل حساب لمندوب من تبويب الحسابات.</p>`}`)}
+ +(list.length?list.map(ordCard).join(""):`<p class="mute" style="text-align:center">${ordView==="cur"?"مفيش طلبات حالية — كل الطلبات اتسلمت ✅":"مفيش طلبات سابقة في الفترة دي."}</p>`))}
 async function aord(){
  const[a,b,pi]=await Promise.all([ok(sb.from("orders").select("*,customer:profiles!customer_id(shop_name,phone,address),order_items(name,qty,unit_price,product_id)").order("id",{ascending:false})),ok(sb.from("profiles").select("id,name,shop_name").eq("role","courier").eq("approved",true)),ok(sb.from("products").select("id,image_url"))]);
  const O=a.data,R=b.data,nm=Object.fromEntries(R.map(r=>[r.id,r.name||r.shop_name||"مندوب"]));
  const pim=Object.fromEntries((pi.data||[]).map(p=>[p.id,p.image_url]));
  O.forEach(o=>(o.order_items||[]).forEach(i=>i.image_url=pim[i.product_id]||null));
  AORD=O;ANM=nm;ACOUR=R;
- AREP=R.map(r=>{const m=O.filter(o=>o.rider_id===r.id),dn=m.filter(o=>o.status==="delivered"),exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
-  return `<div class="card"><b>${esc(nm[r.id])}</b><div class="row"><span>تم التسليم / الكل</span><b>${dn.length} / ${m.length}</b></div><div class="row"><span>المحصّل</span><b>${fmt(got)}</b></div><div class="row"><span>العجز</span><b>${fmt(exp-got)}</b></div><div class="row"><span>مرتجعات</span><b>${fmt(rt)}</b></div></div>`}).join("");
  renderAord()}
+/* ===== تبويب المناديب: كشف حساب + طلبات + قائمة تجهيز مجمعة ===== */
+async function acour(){
+ const[a,b,pi]=await Promise.all([ok(sb.from("profiles").select("*").eq("role","courier").eq("approved",true).order("created_at")),ok(sb.from("orders").select("*,customer:profiles!customer_id(shop_name,phone,address),order_items(name,qty,unit_price,product_id)").order("id",{ascending:false})),ok(sb.from("products").select("id,image_url,unit"))]);
+ const R=a.data,O=b.data,nm=Object.fromEntries(R.map(r=>[r.id,r.name||r.shop_name||"مندوب"]));
+ const pim=Object.fromEntries((pi.data||[]).map(p=>[p.id,p.image_url])),pun=Object.fromEntries((pi.data||[]).map(p=>[p.id,p.unit]));
+ O.forEach(o=>(o.order_items||[]).forEach(i=>{i.image_url=pim[i.product_id]||null;i.unit=pun[i.product_id]||null}));
+ AORD=O;ANM=nm;ACOUR=R;
+ shell(R.length?R.map(r=>{
+  const m=O.filter(o=>o.rider_id===r.id),dn=m.filter(o=>o.status==="delivered"),act=m.filter(o=>["received","preparing","out"].includes(o.status));
+  const exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
+  return `<div class="card"><div class="orow"><div class="cav">${r.photo_url?`<img src="${esc(r.photo_url)}" alt="">`:"👤"}</div><div style="flex:1;min-width:0"><b>${esc(nm[r.id])}</b><div class="mute">📞 ${esc(r.phone||"")}</div></div><button class="btn" data-cour="${r.id}">📋 طلباته وتجهيزه</button></div>
+  <div class="row"><span>طلبات خدها</span><b>${m.length}</b></div><div class="row"><span>تم التسليم</span><b>${dn.length}</b></div><div class="row"><span>لسه معاه</span><b>${act.length}</b></div><div class="row"><span>المطلوب تحصيله</span><b>${fmt(exp)}</b></div><div class="row"><span>المحصّل</span><b>${fmt(got)}</b></div><div class="row"><span>العجز</span><b>${fmt(exp-got)}</b></div><div class="row"><span>مرتجعات</span><b>${fmt(rt)}</b></div></div>`}).join(""):`<p class="mute" style="text-align:center">مفيش مناديب. حوّل حساب لمندوب من تبويب الحسابات.</p>`)}
+function courDlg(id){
+ const r=ACOUR.find(x=>x.id===id);if(!r)return;
+ const m=(AORD||[]).filter(o=>o.rider_id===id),dn=m.filter(o=>o.status==="delivered"),act=m.filter(o=>["received","preparing","out"].includes(o.status));
+ const exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
+ const agg={};
+ act.forEach(o=>(o.order_items||[]).forEach(i=>{const k=i.name+"|"+(i.unit||"");if(!agg[k])agg[k]={name:i.name,qty:0,unit:i.unit,img:i.image_url,orders:[]};agg[k].qty+=+i.qty||0;if(!agg[k].orders.includes(o.id))agg[k].orders.push(o.id)}));
+ const pick=Object.values(agg).sort((a,b)=>b.qty-a.qty);
+ dlg.innerHTML=`<h2>${esc(r.name||r.shop_name||"مندوب")}</h2><div class="mute">📞 ${esc(r.phone||"")}</div>
+ <h3>🧺 قائمة التجهيز — الطلبات اللي معاه دلوقتي (${act.length})</h3>
+ ${pick.length?pick.map(p=>`<div class="orow oitem">${p.img?`<img class="oit" src="${esc(p.img)}" alt="" loading="lazy">`:`<div class="oit ico">📦</div>`}<div style="flex:1;min-width:0"><b>${esc(p.name)}</b><div class="mute">${p.unit?esc(p.unit)+" • ":""}من طلبات: ${p.orders.map(n=>"طلب "+n).join("، ")}</div></div><b class="big">× ${p.qty}</b></div>`).join(""):`<p class="mute">مفيش طلبات حالية للتجهيز.</p>`}
+ <h3>💰 كشف الحساب</h3><div class="row"><span>طلبات خدها</span><b>${m.length}</b></div><div class="row"><span>تم التسليم</span><b>${dn.length}</b></div><div class="row"><span>المطلوب تحصيله</span><b>${fmt(exp)}</b></div><div class="row"><span>المحصّل</span><b>${fmt(got)}</b></div><div class="row"><span>العجز</span><b>${fmt(exp-got)}</b></div><div class="row"><span>مرتجعات</span><b>${fmt(rt)}</b></div>
+ <h3>📋 طلباته (${m.length})</h3>
+ ${m.length?m.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">${esc(o.customer?.phone||"")}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div></div>`).join(""):`<p class="mute">مخدش طلبات لسه.</p>`}
+ <button class="btn ghost" data-close="1">إغلاق</button>`;
+ dlg.showModal()}
 const pimg=p=>p.image_url?`<img class="pimg" src="${esc(p.image_url)}" alt="" loading="lazy">`:`<div class="ico">${p.emoji||"📦"}</div>`;
 async function upImg(file){
  const bmp=await createImageBitmap(file),sc=Math.min(1,700/Math.max(bmp.width,bmp.height)),c=document.createElement("canvas");
@@ -394,14 +420,14 @@ async function aacc(){const{data}=await ok(sb.from("profiles").select("*").order
 /* ===== المندوب ===== */
 async function deliv(){const{data}=await ok(sb.rpc("courier_orders")),todo=data.filter(o=>["received","preparing","out"].includes(o.status));
  CORD=data||[];
- shell(`<div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><div class="orow"><a class="mapbtn" href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a><button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
+ shell(`<div class="card"><div class="orow"><div class="cav">${me.photo_url?`<img src="${esc(me.photo_url)}" alt="">`:"👤"}</div><div style="flex:1;min-width:0"><b>${esc(me.name||me.shop_name||"مندوب")}</b><div class="mute">📞 ${esc(me.phone||"")}</div></div><label class="btn ghost" style="cursor:pointer">📷 صورتي<input type="file" accept="image/*" data-cimg hidden></label></div></div><div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><div class="orow"><a class="mapbtn" href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a><button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
  ${["received","preparing"].includes(o.status)?`<button class="btn" data-out2="${o.id}">خرج للتوصيل</button>`:o.status==="out"?`<button class="btn" data-pay="${o.id}" data-due="${o.due}">تم التسليم والتحصيل</button><button class="btn ghost" data-rt="${o.id}">رفض أو مرتجع</button>`:o.collected!=null?`<div class="mute">اتحصّل ${fmt(o.collected)}</div>`:""}</div></div>`).join(""):`<p class="mute" style="text-align:center">مفيش طلبات متسندة لك لسه.</p>`))}
 const payDlg=(id,due)=>{dlg.innerHTML=`<h2>تأكيد التحصيل</h2><p>المطلوب: <b>${fmt(due)}</b></p><input id="pa" type="number" value="${due}"><button class="btn red" data-payok="${id}" data-due="${due}">تأكيد التسليم</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()};
 async function rtDlg(id){const{data}=await ok(sb.rpc("courier_order_items",{p_oid:id}));
  dlg.innerHTML=`<h2>رفض أو مرتجع</h2><select id="rr"><option>منتج تالف</option><option>غلط في الصنف</option><option>تأخير</option><option>المحل غيّر رأيه</option></select><p class="mute">اكتب الكمية المرتجعة لكل صنف (0 لو مش راجع).</p>`+data.map(i=>`<div class="row"><span>${esc(i.name)} (طلب ${i.qty})</span><input style="width:80px" type="number" min="0" max="${i.qty}" value="0" data-it="${i.item_id}"></div>`).join("")+`<button class="btn red" data-rok="${id}">تسجيل</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()}
 
 /* ===== تفاصيل الطلب الكاملة (أدمن + مندوب): صور وأسعار وإجماليات ===== */
-let AORD=[],ANM={},CORD=[],AREP="",ACOUR=[];
+let AORD=[],ANM={},CORD=[],ACOUR=[];
 function ordDlg(o){
  const items=o.items||[];
  const lines=items.map(i=>{const lt=(+i.qty||0)*(+i.unit_price||0);
@@ -469,6 +495,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
   await ok(sb.rpc("confirm_delivery",{p_oid:+d.payok,p_amount:v}));dlg.close();await deliv()}
  if(d.rt)await rtDlg(+d.rt);
  if(d.items)await itemsDlg(+d.items);
+ if(d.cour)courDlg(d.cour);
  if(d.orv){ordView=d.orv;renderAord()}
  if(d.orr){ordRange=d.orr;ordDate="";renderAord()}
  if(d.rok){const lines=[...dlg.querySelectorAll("[data-it]")].map(x=>({item_id:+x.dataset.it,qty:Math.max(0,Math.floor(+x.value)||0)})).filter(l=>l.qty>0);
@@ -477,6 +504,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
  }catch(x){fail(x)}});
 document.addEventListener("change",async e=>{const d=e.target.dataset,v=e.target.value;
  try{
+ if(e.target.dataset.cimg&&e.target.files[0]){try{const u=await upImg(e.target.files[0]);await ok(sb.from("profiles").update({photo_url:u}).eq("id",me.id));me.photo_url=u;await route()}catch(_){alert("الصورة متحفظتش — شغّل ملف schema_v7.sql في Supabase الأول وبعدين جرّب تاني.")}return}
  if(e.target.id==="ordd"){ordDate=v;renderAord();return}
  if(d.st)await ok(sb.from("orders").update({status:v}).eq("id",d.st));
  if(d.rd)await ok(sb.from("orders").update({rider_id:v||null}).eq("id",d.rd));
