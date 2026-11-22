@@ -243,7 +243,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.6";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.7";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -343,16 +343,38 @@ async function mine(){const{data}=await ok(sb.from("orders").select("*,order_ite
  shell(data.length?data.map(o=>`<div class="card ord"><div class="orow"><b>طلب رقم ${o.id}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div></div>`).join(""):`<p class="mute" style="text-align:center">مفيش طلبات لسه.</p>`)}
 
 /* ===== الأدمن ===== */
+let ordView="cur",ordRange="all",ordDate="",ordQ="";
+const ordCard=o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
+ <select data-rd="${o.id}"><option value="">اسند لمندوب</option>${ACOUR.map(r=>`<option value="${r.id}" ${o.rider_id===r.id?"selected":""}>${esc(ANM[r.id])}</option>`).join("")}</select></span></div></div>`;
+const dstr=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+function renderAord(){
+ const cur=(AORD||[]).filter(o=>["received","preparing","out"].includes(o.status));
+ const past=(AORD||[]).filter(o=>["delivered","rejected"].includes(o.status));
+ let list=ordView==="cur"?cur:past;
+ if(ordView==="past"){
+  const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const w7=new Date(today);w7.setDate(w7.getDate()-6);
+  const m1=new Date(now.getFullYear(),now.getMonth(),1);
+  if(ordDate)list=list.filter(o=>dstr(o.created_at)===ordDate);
+  else if(ordRange==="today")list=list.filter(o=>new Date(o.created_at)>=today);
+  else if(ordRange==="week")list=list.filter(o=>new Date(o.created_at)>=w7);
+  else if(ordRange==="month")list=list.filter(o=>new Date(o.created_at)>=m1);
+  if(ordQ.trim())list=list.filter(o=>String(o.id).includes(ordQ.trim()));
+ }
+ const chip=(v,l)=>`<button class="btn ${ordRange===v&&!ordDate?"":"ghost"}" data-orr="${v}">${l}</button>`;
+ shell(`<div class="orow" style="margin-bottom:10px"><button class="btn ${ordView==="cur"?"":"ghost"}" data-orv="cur">📦 الحالية (${cur.length})</button><button class="btn ${ordView==="past"?"":"ghost"}" data-orv="past">🗂️ السابقة (${past.length})</button></div>`
+ +(ordView==="past"?`<div class="card"><div class="orow">${chip("all","الكل")}${chip("today","اليوم")}${chip("week","الأسبوع")}${chip("month","الشهر")}</div><div class="orow"><input type="date" id="ordd" value="${ordDate}" style="flex:1"><input id="ordq" type="search" inputmode="numeric" placeholder="ابحث برقم الطلب…" value="${esc(ordQ)}" style="flex:1"></div></div>`:"")
+ +(list.length?list.map(ordCard).join(""):`<p class="mute" style="text-align:center">${ordView==="cur"?"مفيش طلبات حالية — كل الطلبات اتسلمت ✅":"مفيش طلبات سابقة في الفترة دي."}</p>`)
+ +`<h3>كشف المندوبين</h3>${AREP||`<p class="mute">مفيش مناديب. حوّل حساب لمندوب من تبويب الحسابات.</p>`}`)}
 async function aord(){
  const[a,b,pi]=await Promise.all([ok(sb.from("orders").select("*,customer:profiles!customer_id(shop_name,phone,address),order_items(name,qty,unit_price,product_id)").order("id",{ascending:false})),ok(sb.from("profiles").select("id,name,shop_name").eq("role","courier").eq("approved",true)),ok(sb.from("products").select("id,image_url"))]);
  const O=a.data,R=b.data,nm=Object.fromEntries(R.map(r=>[r.id,r.name||r.shop_name||"مندوب"]));
  const pim=Object.fromEntries((pi.data||[]).map(p=>[p.id,p.image_url]));
  O.forEach(o=>(o.order_items||[]).forEach(i=>i.image_url=pim[i.product_id]||null));
- AORD=O;ANM=nm;
- const rep=R.map(r=>{const m=O.filter(o=>o.rider_id===r.id),dn=m.filter(o=>o.status==="delivered"),exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
+ AORD=O;ANM=nm;ACOUR=R;
+ AREP=R.map(r=>{const m=O.filter(o=>o.rider_id===r.id),dn=m.filter(o=>o.status==="delivered"),exp=dn.reduce((s,o)=>s+o.total-o.returned_value,0),got=dn.reduce((s,o)=>s+(+o.collected||0),0),rt=m.reduce((s,o)=>s+ +o.returned_value,0);
   return `<div class="card"><b>${esc(nm[r.id])}</b><div class="row"><span>تم التسليم / الكل</span><b>${dn.length} / ${m.length}</b></div><div class="row"><span>المحصّل</span><b>${fmt(got)}</b></div><div class="row"><span>العجز</span><b>${fmt(exp-got)}</b></div><div class="row"><span>مرتجعات</span><b>${fmt(rt)}</b></div></div>`}).join("");
- shell(O.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
- <select data-rd="${o.id}"><option value="">اسند لمندوب</option>${R.map(r=>`<option value="${r.id}" ${o.rider_id===r.id?"selected":""}>${esc(nm[r.id])}</option>`).join("")}</select></span></div></div>`).join("")+`<h3>كشف المندوبين</h3>${rep||`<p class="mute">مفيش مناديب. حوّل حساب لمندوب من تبويب الحسابات.</p>`}`)}
+ renderAord()}
 const pimg=p=>p.image_url?`<img class="pimg" src="${esc(p.image_url)}" alt="" loading="lazy">`:`<div class="ico">${p.emoji||"📦"}</div>`;
 async function upImg(file){
  const bmp=await createImageBitmap(file),sc=Math.min(1,700/Math.max(bmp.width,bmp.height)),c=document.createElement("canvas");
@@ -378,7 +400,7 @@ async function rtDlg(id){const{data}=await ok(sb.rpc("courier_order_items",{p_oi
  dlg.innerHTML=`<h2>رفض أو مرتجع</h2><select id="rr"><option>منتج تالف</option><option>غلط في الصنف</option><option>تأخير</option><option>المحل غيّر رأيه</option></select><p class="mute">اكتب الكمية المرتجعة لكل صنف (0 لو مش راجع).</p>`+data.map(i=>`<div class="row"><span>${esc(i.name)} (طلب ${i.qty})</span><input style="width:80px" type="number" min="0" max="${i.qty}" value="0" data-it="${i.item_id}"></div>`).join("")+`<button class="btn red" data-rok="${id}">تسجيل</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()}
 
 /* ===== تفاصيل الطلب الكاملة (أدمن + مندوب): صور وأسعار وإجماليات ===== */
-let AORD=[],ANM={},CORD=[];
+let AORD=[],ANM={},CORD=[],AREP="",ACOUR=[];
 function ordDlg(o){
  const items=o.items||[];
  const lines=items.map(i=>{const lt=(+i.qty||0)*(+i.unit_price||0);
@@ -446,12 +468,15 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
   await ok(sb.rpc("confirm_delivery",{p_oid:+d.payok,p_amount:v}));dlg.close();await deliv()}
  if(d.rt)await rtDlg(+d.rt);
  if(d.items)await itemsDlg(+d.items);
+ if(d.orv){ordView=d.orv;renderAord()}
+ if(d.orr){ordRange=d.orr;ordDate="";renderAord()}
  if(d.rok){const lines=[...dlg.querySelectorAll("[data-it]")].map(x=>({item_id:+x.dataset.it,qty:Math.max(0,Math.floor(+x.value)||0)})).filter(l=>l.qty>0);
   if(!lines.length)return alert("اكتب كمية مرتجعة لصنف واحد على الأقل.");
   await ok(sb.rpc("record_return",{p_oid:+d.rok,p_lines:lines,p_reason:$("#rr").value}));dlg.close();await deliv()}
  }catch(x){fail(x)}});
 document.addEventListener("change",async e=>{const d=e.target.dataset,v=e.target.value;
  try{
+ if(e.target.id==="ordd"){ordDate=v;renderAord();return}
  if(d.st)await ok(sb.from("orders").update({status:v}).eq("id",d.st));
  if(d.rd)await ok(sb.from("orders").update({rider_id:v||null}).eq("id",d.rd));
  if(d.pr)await ok(sb.from("products").update({price:Math.max(0,+v)}).eq("id",d.pr));
@@ -468,7 +493,9 @@ document.addEventListener("change",async e=>{const d=e.target.dataset,v=e.target
  if(d.ta)await ok(sb.from("discount_tiers").update({active:e.target.checked}).eq("id",d.ta));
  if(d.st||d.rd||d.pr||d.sk||d.ac||d.dp||d.tm||d.tp||d.ta||d.nm||d.un||d.ct||d.img)await route()
  }catch(x){fail(x)}});
-document.addEventListener("input",async e=>{if(e.target.id!=="sq")return;const raw=e.target.value;q=raw.trim();await store();const s=$("#sq");if(s){s.value=raw;s.focus();try{s.setSelectionRange(raw.length,raw.length)}catch(_){}}});
+document.addEventListener("input",async e=>{
+ if(e.target.id==="ordq"){ordQ=e.target.value;renderAord();const s=$("#ordq");if(s){s.focus();try{s.setSelectionRange(s.value.length,s.value.length)}catch(_){}}return}
+ if(e.target.id!=="sq")return;const raw=e.target.value;q=raw.trim();await store();const s=$("#sq");if(s){s.value=raw;s.focus();try{s.setSelectionRange(raw.length,raw.length)}catch(_){}}});
 /* زر تثبيت التطبيق للي بيفتح الرابط لأول مرة */
 let ip=null;
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
