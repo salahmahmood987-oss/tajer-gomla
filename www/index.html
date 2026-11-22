@@ -160,8 +160,8 @@ dialog h2{margin:0 0 10px;font-size:20px;font-weight:800}
 .orow b{font-size:16px}
 .ototal{margin-inline-start:auto;font-size:19px;font-weight:800;white-space:nowrap;color:var(--teal)}
 .oitems{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.selrow{flex:1;display:flex;gap:8px;min-width:180px}
-.selrow select{flex:1;min-width:0;margin:2px 0;padding:9px 10px;font-size:15px;font-weight:700;
+.selrow{flex:1 1 100%;display:flex;gap:8px;min-width:0;margin-top:8px}
+.selrow select{flex:1;min-width:0;margin:2px 0;padding:9px 8px;font-size:15px;font-weight:700;
   background:linear-gradient(180deg,#ffffff,#f1f5f9);border:1.5px solid #cbd5e1;
   box-shadow:0 3px 0 var(--edge3d),0 6px 12px rgba(15,23,42,.10)}
 .ord .btn{min-height:48px;margin-top:6px}
@@ -238,7 +238,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.3";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.4";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
