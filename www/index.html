@@ -150,12 +150,13 @@ dialog h2{margin:0 0 10px;font-size:20px;font-weight:800}
 .ord{padding:14px 16px;margin-bottom:12px;border-bottom:0;
   box-shadow:0 5px 0 var(--edge3d),0 18px 30px rgba(15,23,42,.16)}
 .ord .orow:first-child{margin-bottom:4px}
-.ord a[href]{display:inline-flex;align-items:center;gap:5px;
+.ord a.mapbtn{display:inline-flex;align-items:center;gap:5px;
   background:linear-gradient(180deg,#10b981,#047857);color:#fff;font-weight:800;font-size:14.5px;
   padding:9px 14px;border-radius:11px;
   box-shadow:0 3px 0 #065f46,0 8px 14px rgba(4,120,87,.25);
   transition:transform .08s,box-shadow .08s}
-.ord a[href]:active{transform:translateY(2px);box-shadow:0 1px 0 #065f46}
+.ord a.mapbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #065f46}
+.ord a[href^="tel:"]{color:inherit;text-decoration:underline}
 .orow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .orow b{font-size:16px}
 .ototal{margin-inline-start:auto;font-size:19px;font-weight:800;white-space:nowrap;color:var(--teal)}
@@ -243,7 +244,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.7";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.8";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -344,7 +345,7 @@ async function mine(){const{data}=await ok(sb.from("orders").select("*,order_ite
 
 /* ===== الأدمن ===== */
 let ordView="cur",ordRange="all",ordDate="",ordQ="";
-const ordCard=o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
+const ordCard=o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.customer?.shop_name)}</b><span class="ototal">${fmt(o.total-o.returned_value)}</span></div><div class="mute">📞 ${esc(o.customer?.phone)}${o.collected!=null?` • المحصّل: ${fmt(o.collected)}`:""}</div>${+o.returned_value?`<div><span class="tag">مرتجع ${fmt(o.returned_value)}${o.reject_reason?"، "+esc(o.reject_reason):""}</span></div>`:""}<div class="mute oitems">${o.order_items.map(i=>esc(i.name)+" × "+i.qty).join("، ")}</div>${o.address?`<div class="mute">${esc(o.address)}</div>`:""}<div class="orow"><a class="mapbtn" href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🗺️ الخريطة</a><span class="selrow"><select data-st="${o.id}">${Object.keys(ST).map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
  <select data-rd="${o.id}"><option value="">اسند لمندوب</option>${ACOUR.map(r=>`<option value="${r.id}" ${o.rider_id===r.id?"selected":""}>${esc(ANM[r.id])}</option>`).join("")}</select></span></div></div>`;
 const dstr=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 function renderAord(){
@@ -393,8 +394,8 @@ async function aacc(){const{data}=await ok(sb.from("profiles").select("*").order
 /* ===== المندوب ===== */
 async function deliv(){const{data}=await ok(sb.rpc("courier_orders")),todo=data.filter(o=>["received","preparing","out"].includes(o.status));
  CORD=data||[];
- shell(`<div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><a href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a> <button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
- ${["received","preparing"].includes(o.status)?`<button class="btn" data-out2="${o.id}">خرج للتوصيل</button>`:o.status==="out"?`<button class="btn" data-pay="${o.id}" data-due="${o.due}">تم التسليم والتحصيل</button><button class="btn ghost" data-rt="${o.id}">رفض أو مرتجع</button>`:o.collected!=null?`<div class="mute">اتحصّل ${fmt(o.collected)}</div>`:""}</div>`).join(""):`<p class="mute" style="text-align:center">مفيش طلبات متسندة لك لسه.</p>`))}
+ shell(`<div class="card"><div class="mute">مطلوب تحصيله</div><div class="big">${fmt(todo.reduce((s,o)=>s+ +o.due,0))}</div></div>`+(data.length?data.map(o=>`<div class="card ord" data-ord="${o.id}"><div class="orow"><b>طلب ${o.id}، ${esc(o.shop_name)}</b><span class="tag st-${o.status}">${ST[o.status]}</span><span class="ototal">${fmt(o.due)}</span></div><div class="mute">📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>${o.address?` • ${esc(o.address)}`:""}</div><div class="orow"><a class="mapbtn" href="${esc(mapUrl(o))}" target="_blank" rel="noopener">🧭 الاتجاهات</a><button class="btn ghost" data-items="${o.id}">📋 الأصناف</button>
+ ${["received","preparing"].includes(o.status)?`<button class="btn" data-out2="${o.id}">خرج للتوصيل</button>`:o.status==="out"?`<button class="btn" data-pay="${o.id}" data-due="${o.due}">تم التسليم والتحصيل</button><button class="btn ghost" data-rt="${o.id}">رفض أو مرتجع</button>`:o.collected!=null?`<div class="mute">اتحصّل ${fmt(o.collected)}</div>`:""}</div></div>`).join(""):`<p class="mute" style="text-align:center">مفيش طلبات متسندة لك لسه.</p>`))}
 const payDlg=(id,due)=>{dlg.innerHTML=`<h2>تأكيد التحصيل</h2><p>المطلوب: <b>${fmt(due)}</b></p><input id="pa" type="number" value="${due}"><button class="btn red" data-payok="${id}" data-due="${due}">تأكيد التسليم</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()};
 async function rtDlg(id){const{data}=await ok(sb.rpc("courier_order_items",{p_oid:id}));
  dlg.innerHTML=`<h2>رفض أو مرتجع</h2><select id="rr"><option>منتج تالف</option><option>غلط في الصنف</option><option>تأخير</option><option>المحل غيّر رأيه</option></select><p class="mute">اكتب الكمية المرتجعة لكل صنف (0 لو مش راجع).</p>`+data.map(i=>`<div class="row"><span>${esc(i.name)} (طلب ${i.qty})</span><input style="width:80px" type="number" min="0" max="${i.qty}" value="0" data-it="${i.item_id}"></div>`).join("")+`<button class="btn red" data-rok="${id}">تسجيل</button><button class="btn ghost" data-close="1">إلغاء</button>`;dlg.showModal()}
