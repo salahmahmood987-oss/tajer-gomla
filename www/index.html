@@ -238,7 +238,7 @@ const tagTxt=(p,n)=>{const c=dp(p,n);if(c)return `خصم ${c}% مطبق`;const t
 const TABS={customer:[["store","المتجر"],["mine","طلباتي"]],admin:[["aord","الطلبات"],["aprod","المنتجات"],["adisc","الخصومات"],["aacc","الحسابات"]],courier:[["deliv","توصيلاتي"]]};
 const IC={store:"🛒",mine:"📦",aord:"📋",aprod:"🏷️",adisc:"🎁",aacc:"👥",deliv:"🚚"};
 let me,tab,cart={},cat="الكل",q="",P=[],mode="in",err="";
-const APP_VERSION="2.8.4";let NEW_VER="",NEW_APK="",NEW_SHA="";
+const APP_VERSION="2.8.5";let NEW_VER="",NEW_APK="",NEW_SHA="";
 // التطبيق الأصلي (Capacitor) ولا المتصفح؟ — في التطبيق بنفحص version.json من GitHub وبنثبّت الـ APK، وفي المتصفح بنحدّث بإعادة التحميل.
 const IS_NATIVE=()=>{try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}catch(e){return false}};
 const VER_URL=()=>IS_NATIVE()?"https://raw.githubusercontent.com/salahmahmood987-oss/tajer-gomla/main/version.json":"version.json?ts="+Date.now();
@@ -322,10 +322,14 @@ function cartDlg(){const t=cartTotal(),g=t>=2000;
  dlg.innerHTML=`<h2>سلة الطلب</h2>`+P.filter(p=>cart[p.id]).map(p=>`<div class="row"><span>${esc(p.name)} × ${cart[p.id]}</span><b>${fmt(up(p,cart[p.id])*cart[p.id])}</b></div>`).join("")+`<div class="row big"><span>الإجمالي</span><span>${fmt(t)}</span></div>${g?"":`<div class="warn">الحد الأدنى للطلب 2000 ج.م. ناقص ${fmt(2000-t)}.</div>`}<button class="btn red" data-loc="1" ${g?"":"disabled"}>أكمل وحدد موقع التوصيل</button><button class="btn ghost" data-close="1">كمّل تسوق</button>`;dlg.showModal()}
 const locDlg=()=>{dlg.innerHTML=`<h2>فين مكان التوصيل؟</h2><p class="mute">محتاجين مكان محلك عشان المندوب يوصلك بسرعة. هيظهر لك طلب إذن، اضغط "سماح".</p><div class="warn" id="lw" hidden></div><button class="btn red" data-geo="1">حدد موقعي تلقائيًا</button><button class="btn ghost" data-man="1">هكتب العنوان بإيدي</button>`};
 const manDlg=()=>{dlg.innerHTML=`<h2>اكتب عنوان التوصيل</h2><textarea id="ma" rows="3" placeholder="المنطقة، الشارع، رقم المحل، أقرب علامة"></textarea><input id="ml" placeholder="رابط موقعك من جوجل ماب (اختياري)"><div class="warn" id="mw" hidden>اكتب العنوان الأول.</div><button class="btn red" data-mok="1">تأكيد وإرسال الطلب</button><button class="btn ghost" data-loc="1">أحدد موقعي تلقائيًا بدل كده</button>`};
-function geo(b){const w=$("#lw"),say=m=>{w.hidden=false;w.textContent=m};
- if(!navigator.geolocation)return say("جهازك مش بيدعم التحديد التلقائي. اكتب عنوانك بإيدك.");
+async function geo(b){const w=$("#lw"),say=m=>{w.hidden=false;w.textContent=m};
+ const C=window.Capacitor;
  b.disabled=true;say("جاري تحديد موقعك...");
- navigator.geolocation.getCurrentPosition(p=>send({lat:p.coords.latitude,lng:p.coords.longitude}),()=>{b.disabled=false;say("ماقدرناش نوصل لموقعك. اتأكد إن اللوكيشن شغال واضغط سماح، أو اكتب عنوانك بإيدك.")},{enableHighAccuracy:true,timeout:15000})}
+ try{let p;
+  if(C&&C.Plugins&&C.Plugins.Geolocation){p=await C.Plugins.Geolocation.getCurrentPosition({enableHighAccuracy:true,timeout:15000})}
+  else{if(!navigator.geolocation)return say("جهازك مش بيدعم التحديد التلقائي. اكتب عنوانك بإيدك.");p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:15000}))}
+  send({lat:p.coords.latitude,lng:p.coords.longitude});
+ }catch(e){b.disabled=false;say("ماقدرناش نوصل لموقعك. اتأكد إن اللوكيشن شغال واضغط سماح، أو اكتب عنوانك بإيدك.")}}
 async function send(L){
  try{await ok(sb.rpc("place_order",{items:Object.entries(cart).map(([id,qty])=>({product_id:+id,qty})),p_lat:L.lat??null,p_lng:L.lng??null,p_address:L.addr??null,p_link:safeUrl(L.link)||null,note:null}))}
  catch(e){dlg.close();return fail(e)}
